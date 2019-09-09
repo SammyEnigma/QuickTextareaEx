@@ -4,7 +4,7 @@
 //#include <QObject>
 #include <QTextCodec>
 #include <QtQuickTemplates2/private/qquicktextarea_p.h>
-#include <QtQuickTemplates2/private/qquicktextarea_p_p.h>
+
 
 class QuickTextAreaEx : public QQuickTextArea
 {
@@ -18,16 +18,12 @@ class QuickTextAreaEx : public QQuickTextArea
 public:
     enum TextType{NORMAL,HEX,BASE64};
     explicit QuickTextAreaEx(QQuickItem *parent = nullptr);
-    static QByteArray getByteArray(const QString&,int, QTextCodec *);
-    static QString getEncodeStr(const QByteArray&,int, QTextCodec *);
-    static QString getStrFromByteArray(const QByteArray&,int, QTextCodec *);
-
+    //~QuickTextAreaEx();
     Q_INVOKABLE QByteArray getByteArray();
+    QByteArray getByteArray(QString);
     Q_INVOKABLE QStringList getStrListByLines();
     Q_INVOKABLE QByteArrayList getBytesListByLines();
     Q_INVOKABLE QVariantList getBytesVarListByLines();
-    Q_INVOKABLE QVariantList getBytesVarListByMultiLines();
-    Q_INVOKABLE QStringList getStrListByTextType(int textType);
 
 
     TextType textType() const{return m_textType;}
@@ -46,8 +42,9 @@ public slots:
     void setMultiLines(const bool &multiLines);
 
 private:
-    Q_DECLARE_PRIVATE(QQuickTextArea)//使用 QQuickTextArea 的d指针
-
+    inline QQuickTextAreaPrivate* d_func() { return reinterpret_cast<QQuickTextAreaPrivate *>(qGetPtrHelper(d_ptr)); }
+    inline const QQuickTextAreaPrivate* d_func() const { return reinterpret_cast<const QQuickTextAreaPrivate *>(qGetPtrHelper(d_ptr)); }
+    friend class QQuickTextAreaPrivate;
 
 private:
     TextType m_textType = NORMAL;

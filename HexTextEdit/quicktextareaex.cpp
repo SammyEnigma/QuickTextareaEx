@@ -8,6 +8,7 @@
 //#include <QFontDatabase>
 //#include <QFileInfo>
 //#include <QtQuickTemplates2/private/qquicktextarea_p_p.h>
+#include <QtQuickTemplates2/private/qquicktextarea_p_p.h>
 #define QT_BUILD_INTERNAL
 #include <QtQuick/private/qquicktextcontrol_p.h>
 //#include <qquicktextcontrol_p.h>
@@ -41,57 +42,35 @@
 QRegExp QuickTextAreaEx::hexreg("[\\da-fA-F]");
 QRegExp QuickTextAreaEx::hexregn("[\\da-fA-F\u2028\u2029]");//\\n\\r
 
-QRegExp QuickTextAreaEx::reg64("[\\da-zA-Z\\+\\/=]");
-QRegExp QuickTextAreaEx::reg64n("[\\da-zA-Z\\+\\/=\u2028\u2029]");//\\n\\r
+QRegExp QuickTextAreaEx::reg64("[\\da-zA-Z\\+\\/]");
+QRegExp QuickTextAreaEx::reg64n("[\\da-zA-Z\\+\\/\u2028\u2029]");//\\n\\r
 
 QuickTextAreaEx::QuickTextAreaEx(QQuickItem *parent) : QQuickTextArea(parent)
 {
     connect(this->textDocument()->textDocument(),&QTextDocument::contentsChange,this,&QuickTextAreaEx::contentsChange);
+    //connect(this,)
 }
 
 QByteArray QuickTextAreaEx::getByteArray(){
-    return  getByteArray(this->text(),m_textType,m_tc);
+    return  getByteArray(this->text());
 }
 
-QByteArray QuickTextAreaEx::getByteArray(const QString &text,int tt, QTextCodec *tc){
+QByteArray QuickTextAreaEx::getByteArray(QString text){
     QByteArray arr ;
-    if(tt == HEX){
+    if(m_textType == HEX){
         arr =  QByteArray::fromHex(text.toLatin1());
-    }else if (tt == BASE64) {
+    }else if (m_textType == BASE64) {
         arr =  QByteArray::fromBase64(text.toLatin1());
     }else{
-        arr = tc->fromUnicode(text);
+        arr = m_tc->fromUnicode(text);
     }
     return arr;
 }
-QString QuickTextAreaEx::getEncodeStr(const QByteArray&ba,int tt, QTextCodec *tc){
-    QString str ;
-    if(tt == HEX){
-        str =  ba.toHex();
-    }else if (tt == BASE64) {
-        str =  ba.toBase64();
-    }else{
-        str = tc->toUnicode(ba);
-    }
-    return str;
-}
-QString QuickTextAreaEx::getStrFromByteArray(const QByteArray& ba,int tt, QTextCodec *tc){
-    QString str ;
-    if(tt == HEX){
-        str =  ba.toHex();
-    }else if (tt == BASE64) {
-        str =  ba.toBase64();
-    }else{
-        str = tc->toUnicode(ba);
-    }
-    return str;
-}
 
 void QuickTextAreaEx::setTextType(const TextType &textType){
-    DEBUG<<"m_textType:"<<m_textType<<";textType:"<<textType<<";length:"<<this->length();
     if(textType == m_textType || textType >2 || textType <0 ) return;
     //QQuickTextAreaPrivate *d = d_func();
-
+DEBUG<<m_textType<<textType;
     QByteArray arr1;
     QByteArrayList bytesList;
 
@@ -104,14 +83,9 @@ void QuickTextAreaEx::setTextType(const TextType &textType){
     DEBUG<<bytesList.size();
     TextType textTypetmp = m_textType;
     try {
-        DEBUG;
         m_textType = textType;
-        DEBUG;
         if(bytesList.size()>0){
-            DEBUG;
-            //this->clear();
-            setText(QString());
-            DEBUG;
+            this->clear();
             for(QByteArray arr:bytesList){
                 DEBUG<<arr.toHex();
                 if(textType == HEX){
@@ -124,27 +98,17 @@ void QuickTextAreaEx::setTextType(const TextType &textType){
                 }
             }
         }
-    } catch (QException& e) {
-        DEBUG<<"err"<<e.what();
+    } catch (QException e) {
         m_textType = textTypetmp;
-        return;
-    }catch (std::exception &e1) {
-        DEBUG<<"err"<<e1.what();
-        m_textType = textTypetmp;
-        return;
-    }catch (... ) {
-        DEBUG<<"err";
-        m_textType = textTypetmp;
-        return;
     }
-DEBUG;
+
     emit textTypeChanged(textType);
 
 }
 void QuickTextAreaEx::contentsChange(int position/*from*/, int /*charsRemoved*/, int charsAdded){
     if(m_textType == NORMAL  ||  charsAdded<=0)   return;
 
-    DEBUG<<m_textType<<position<<charsAdded;
+    DEBUG<<m_textType<<charsAdded;
 
     QQuickTextDocument *qqdoc = this->textDocument();
     QQuickTextAreaPrivate *d = d_func();
@@ -158,7 +122,7 @@ void QuickTextAreaEx::contentsChange(int position/*from*/, int /*charsRemoved*/,
 
 
     QTextDocument* doc = qqdoc->textDocument();
-DEBUG;
+
     bool notHex = false;
     if(m_textType == HEX){
         for(int i=0;i<charsAdded;++i){
@@ -236,7 +200,7 @@ QByteArrayList QuickTextAreaEx::getBytesListByLines(){
 
     QByteArrayList byteslist;
     for(auto str: strlist){
-        byteslist.append(getByteArray(str,m_textType,m_tc));
+        byteslist.append(getByteArray(str));
     }
     return byteslist;
 }
@@ -245,28 +209,7 @@ QVariantList QuickTextAreaEx::getBytesVarListByLines(){
 
     QVariantList byteslist;
     for(auto str: strlist){
-        //DEBUG<<m_textType<<str;
-        byteslist.append(getByteArray(str,m_textType,m_tc));
+        byteslist.append(getByteArray(str));
     }
     return byteslist;
-}
-
-QVariantList QuickTextAreaEx::getBytesVarListByMultiLines(){
-    if(m_multiLines){
-        return getBytesVarListByLines();
-    }else{
-        return {QVariant(getByteArray())};
-    }
-}
-
-QStringList QuickTextAreaEx::getStrListByTextType(int textType){
-    if(textType == m_textType) return {this->text()};
-
-    QVariantList vl= getBytesVarListByMultiLines();
-    QStringList lst;
-    for(auto v:vl){
-        lst.push_back(getEncodeStr(v.toByteArray(),textType,m_tc));
-    }
-
-return lst;
 }
